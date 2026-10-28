@@ -36,7 +36,7 @@
 
 ### 本地运行
 
-```bash
+bash
 # 1. 克隆项目
 git clone https://github.com/S-H-S996/Zhijing.git
 cd Zhijing/zhijing
@@ -46,25 +46,18 @@ pip install -r requirements.txt
 
 # 3. 配置环境变量 (可选，不配也能离线运行规则引擎)
 cp .env.example .env
+# (Windows 用户使用 copy .env.example .env)
 # 编辑 .env，填入 LLM_API_KEY (如 DeepSeek)
 
 # 4. 启动应用
 streamlit run app.py
 
-
-### Docker 部署
-
-```bash
+Docker部署
 cd zhijing
 docker build -t zhijing:v2 .
 docker run -p 8501:8501 zhijing:v2
 
-
-**2. 目录结构部分（同样使用代码块，保持对齐）：**
-```markdown
-## 📂 目录结构
-
-```text
+目标目录
 zhijing/
 ├── app.py              # Streamlit 主界面
 ├── core/
@@ -77,3 +70,5 @@ zhijing/
 ├── eval/               # 评测脚本与基准数据集
 ├── tests/              # Pytest 单元测试
 └── .github/workflows/  # GitHub Actions CI 流水线
+
+本项目为大学生创新创业训练计划（大创）项目，旨在用 AI 技术解决大学生求职痛点，探索 AI 应用开发的最佳实践。
