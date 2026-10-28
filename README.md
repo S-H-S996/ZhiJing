@@ -36,7 +36,7 @@
 
 ### 本地运行
 
-bash
+```bash
 # 1. 克隆项目
 git clone https://github.com/S-H-S996/Zhijing.git
 cd Zhijing/zhijing
