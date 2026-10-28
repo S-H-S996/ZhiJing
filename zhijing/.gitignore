@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 data/records.db
 data/tessdata/
+eval/results/
 .streamlit/
