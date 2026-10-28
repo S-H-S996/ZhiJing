@@ -50,3 +50,30 @@ cp .env.example .env
 
 # 4. 启动应用
 streamlit run app.py
+
+
+### Docker 部署
+
+```bash
+cd zhijing
+docker build -t zhijing:v2 .
+docker run -p 8501:8501 zhijing:v2
+
+
+**2. 目录结构部分（同样使用代码块，保持对齐）：**
+```markdown
+## 📂 目录结构
+
+```text
+zhijing/
+├── app.py              # Streamlit 主界面
+├── core/
+│   ├── parser.py       # 简历规则解析
+│   ├── llm_extractor.py# LLM 结构化抽取兜底
+│   ├── matcher.py      # 匹配评分规则
+│   ├── rag.py          # RAG 检索与生成链路
+│   ├── agent_graph.py  # LangGraph 智能体
+│   └── judge.py        # LLM-as-Judge 质量门控
+├── eval/               # 评测脚本与基准数据集
+├── tests/              # Pytest 单元测试
+└── .github/workflows/  # GitHub Actions CI 流水线
