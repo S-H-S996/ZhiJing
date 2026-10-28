@@ -1,0 +1,28 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff mypy
+      - name: Lint (ruff)
+        run: ruff check core app.py eval tests
+      - name: Type check (mypy, 允许失败)
+        run: mypy core --ignore-missing-imports
+        continue-on-error: true
+      - name: Test (pytest + coverage)
+        run: pytest -q --cov=core --cov-report=xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
