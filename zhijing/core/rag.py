@@ -1,11 +1,13 @@
 """RAG（检索增强生成）建议引擎：根据简历缺口检索「补法知识库」，再交给大模型生成落地建议。
 
-三步：检索（关键词相似度，离线可跑）→ 增强（把检索到的知识片段拼进 prompt）→ 生成。
+三步：检索 → 增强（把检索到的知识片段拼进 prompt）→ 生成。
 - 配置了 LLM 时：用知识片段增强 prompt，让大模型生成个性化建议。
 - 未配置 LLM 时：直接返回检索到的知识片段本身作为建议（同样可用）。
 
-之所以自己实现检索、不依赖向量库：知识库很小（十几条），关键词重叠已经够准，
-且能保证「无 API Key 也能完整跑通」——这是本项目可离线交付的关键。
+检索有两种实现：
+- retrieve_keyword：关键词子串匹配（baseline，无依赖、离线可跑）
+- retrieve_vector：向量召回 + CrossEncoder 重排（升级版，依赖 sentence-transformers/chromadb）
+- retrieve(mode="auto")：优先向量，任何异常回退关键词；无依赖时自动回退，保证完整跑通
 """
 from __future__ import annotations
 
@@ -151,12 +153,58 @@ def _score(doc: dict, query: str) -> float:
     return sum(1.0 for tag in doc["tags"] if tag and tag.lower() in q)
 
 
-def retrieve(query: str, k: int = 3) -> list[dict]:
-    """检索与 query 最相关的知识片段，返回 top-k（无命中返回空列表）。"""
+def retrieve_keyword(query: str, k: int = 3) -> list[dict]:
+    """关键词子串匹配检索（baseline）：返回 top-k（无命中返回空列表）。"""
     scored = [(d, _score(d, query)) for d in KNOWLEDGE_BASE]
     scored = [(d, s) for d, s in scored if s > 0]
     scored.sort(key=lambda x: -x[1])
     return [d for d, _ in scored[:k]]
+
+
+def retrieve_vector(query: str, k: int = 20) -> list[dict]:
+    """向量召回：语义检索 top-k，返回 [{id, title, content, score}]；无依赖返回空列表。"""
+    from . import vector_store
+    return vector_store.search(query, k=k)
+
+
+def retrieve(query: str, k: int = 3, mode: str = "auto") -> list[dict]:
+    """统一检索入口。
+
+    - mode="keyword"：强制关键词检索
+    - mode="vector"：强制向量召回 20 → 重排 k
+    - mode="auto"：优先向量（召回 20 → 重排 k），任何异常回退关键词
+    返回的每条 doc 带 "retrieve_mode" 字段（"vector"/"keyword"）。
+    """
+    if mode == "keyword":
+        docs = retrieve_keyword(query, k=k)
+        for d in docs:
+            d["retrieve_mode"] = "keyword"
+        return docs
+
+    if mode == "vector":
+        docs = retrieve_vector(query, k=20)
+        if docs:
+            from . import reranker
+            docs = reranker.rerank(query, docs, top_k=k)
+        for d in docs:
+            d["retrieve_mode"] = "vector"
+        return docs
+
+    # mode == "auto"
+    try:
+        docs = retrieve_vector(query, k=20)
+        if not docs:
+            raise RuntimeError("vector retrieval empty")
+        from . import reranker
+        docs = reranker.rerank(query, docs, top_k=k)
+        for d in docs:
+            d["retrieve_mode"] = "vector"
+        return docs
+    except Exception:
+        docs = retrieve_keyword(query, k=k)
+        for d in docs:
+            d["retrieve_mode"] = "keyword"
+        return docs
 
 
 def format_context(docs: list[dict]) -> str:
@@ -164,14 +212,15 @@ def format_context(docs: list[dict]) -> str:
     return "\n\n".join(f"【{d['title']}】{d['content']}" for d in docs)
 
 
-def rag_suggestions(query: str, jd_title: str, gaps: list[str], profile_text: str):
+def rag_suggestions(query: str, jd_title: str, gaps: list[str], profile_text: str, mode: str = "auto"):
     """RAG 主流程：检索 → 增强 → 生成。
 
     返回 (suggestions, retrieved_docs, used_llm)：
     - used_llm=True 表示大模型基于知识片段生成了个性化建议
     - used_llm=False 表示离线降级，直接返回检索到的知识片段本身
+    retrieved_docs 每条带 "retrieve_mode" 字段（"vector"/"keyword"）。
     """
-    docs = retrieve(query)
+    docs = retrieve(query, mode=mode)
     context = format_context(docs)
 
     if llm.is_configured() and docs:

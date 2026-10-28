@@ -85,6 +85,14 @@ def main():
                     "`LLM_API_KEY=你的key`\n"
                     "`LLM_MODEL=deepseek-chat`")
         st.divider()
+        st.header("🔍 检索模式")
+        search_mode = st.selectbox(
+            "RAG 检索方式",
+            options=["auto", "keyword", "vector"],
+            index=0,
+            help="auto=优先向量、异常回退关键词；keyword=纯关键词；vector=纯向量召回+重排",
+        )
+        st.divider()
         st.header("📊 试用统计")
         st.metric("累计诊断次数", stats["total_runs"])
         st.metric("独立简历数", stats["unique_resumes"])
@@ -131,7 +139,7 @@ def main():
 
         # RAG：检索「补法知识库」→ 增强 → 生成建议（无 API 时降级为检索结果本身）
         query = " ".join(result.gaps + result.missing_skills) + " " + jd["title"]
-        suggestions, rag_docs, used_llm = rag.rag_suggestions(query, jd["title"], result.gaps, resume_text)
+        suggestions, rag_docs, used_llm = rag.rag_suggestions(query, jd["title"], result.gaps, resume_text, mode=search_mode)
         if not suggestions:
             suggestions = generate_suggestions(profile, result, jd)
 
@@ -181,7 +189,8 @@ def main():
         if rag_docs:
             with st.expander("🔍 RAG 检索到的知识片段（建议的增强依据）"):
                 for d in rag_docs:
-                    st.markdown(f"**{d['title']}**：{d['content']}")
+                    tag = d.get("retrieve_mode", "keyword")
+                    st.markdown(f"**[{tag}] {d['title']}**：{d['content']}")
 
         report = build_report(profile, jd, result, suggestions, used_llm)
         st.download_button(

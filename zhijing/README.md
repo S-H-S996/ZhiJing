@@ -32,6 +32,15 @@ cp .env.example .env   # Windows: copy .env.example .env
 # 编辑 .env，填入 LLM_API_KEY 等
 ```
 
+## 向量检索说明（可选）
+
+RAG 的检索默认是「关键词匹配」，可升级为「向量召回 + 重排」（语义更准）：
+
+- 依赖：`sentence-transformers` + `chromadb`（`requirements.txt` 已含）
+- 首次运行会下载模型：`bge-small-zh-v1.5`（约 100MB）+ `bge-reranker-base`（约 1.1GB）
+- 国内可设镜像加速：`export HF_ENDPOINT=https://hf-mirror.com`
+- 无依赖时会自动回退关键词检索，不影响运行
+
 ## 目录结构
 
 ```
