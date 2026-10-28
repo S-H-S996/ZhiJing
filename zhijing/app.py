@@ -12,7 +12,7 @@ import os
 
 import streamlit as st
 
-from core import db, llm, rag, tools, optimizer
+from core import db, llm, rag, tools, optimizer, agent_graph
 from core.advisor import generate_suggestions
 from core.fileio import extract_text
 from core.matcher import match
@@ -65,6 +65,32 @@ def build_report(profile, jd, result, suggestions, used_llm: bool) -> str:
     return "\n".join(lines)
 
 
+def _run_single_turn(system: str, agent_q: str, jds: list[dict], resume_text: str) -> None:
+    """单轮 Function Calling（原逻辑，作为多轮 Agent 的回退）。"""
+    tool_calls = llm.call_with_tools(system, agent_q, tools.TOOL_SCHEMAS)
+    if not tool_calls:
+        answer = llm.chat(system, agent_q)
+        if answer:
+            st.markdown("**💬 助手回答**")
+            st.markdown(answer)
+    else:
+        executed = []
+        for tc in tool_calls:
+            name, args = tc["name"], tc["arguments"]
+            r = tools.run_tool(name, args, jds, resume_text)
+            executed.append((name, r))
+            with st.expander(f"🔧 调用工具 `{name}`（参数 {args}）"):
+                st.text(r)
+        final_user = (
+            f"用户问题：{agent_q}\n\n工具结果：\n"
+            + "\n".join(f"[{name}] {r}" for name, r in executed)
+        )
+        answer = llm.chat(system, final_user)
+        if answer:
+            st.markdown("**💬 助手回答**")
+            st.markdown(answer)
+
+
 def main():
     st.set_page_config(page_title="职镜 · AI 简历诊断", page_icon="🎯", layout="wide")
     st.title("🎯 职镜 —— 面向大学生的 AI 简历诊断工具")
@@ -92,6 +118,15 @@ def main():
             options=["auto", "keyword", "vector"],
             index=0,
             help="auto=优先向量、异常回退关键词；keyword=纯关键词；vector=纯向量召回+重排",
+        )
+        st.divider()
+        st.header("🤖 Agent 模式")
+        agent_mode = st.radio(
+            "智能选岗助手",
+            options=["多轮", "单轮"],
+            index=0,
+            horizontal=True,
+            help="多轮=LangGraph Plan-Act-Reflect；单轮=原 Function Calling",
         )
         st.divider()
         st.header("📊 试用统计")
@@ -274,28 +309,20 @@ def main():
                 "你是「职镜」的智能选岗助手。" + resume_ctx +
                 "\n\n先判断用户问题需要调用哪个工具来获取信息，拿到工具结果后再用简洁的语言回答。"
             )
-            tool_calls = llm.call_with_tools(system, agent_q, tools.TOOL_SCHEMAS)
-            if not tool_calls:
-                answer = llm.chat(system, agent_q)
-                if answer:
+            if agent_mode == "多轮":
+                agent_result = agent_graph.run_agent(system, agent_q, tools.TOOL_SCHEMAS, resume_text)
+                if agent_result is not None:
                     st.markdown("**💬 助手回答**")
-                    st.markdown(answer)
+                    st.markdown(agent_result["answer"])
+                    if agent_result.get("steps"):
+                        with st.expander("🤖 执行步骤（Plan-Act-Reflect）"):
+                            for s in agent_result["steps"]:
+                                st.markdown(f"**{s['node']}**：{s['summary']}")
+                else:
+                    st.caption("（langgraph 未安装或不可用，回退单轮）")
+                    _run_single_turn(system, agent_q, jds, resume_text)
             else:
-                executed = []
-                for tc in tool_calls:
-                    name, args = tc["name"], tc["arguments"]
-                    r = tools.run_tool(name, args, jds, resume_text)
-                    executed.append((name, r))
-                    with st.expander(f"🔧 调用工具 `{name}`（参数 {args}）"):
-                        st.text(r)
-                final_user = (
-                    f"用户问题：{agent_q}\n\n工具结果：\n"
-                    + "\n".join(f"[{name}] {r}" for name, r in executed)
-                )
-                answer = llm.chat(system, final_user)
-                if answer:
-                    st.markdown("**💬 助手回答**")
-                    st.markdown(answer)
+                _run_single_turn(system, agent_q, jds, resume_text)
 
 
 if __name__ == "__main__":
