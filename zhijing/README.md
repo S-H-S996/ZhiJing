@@ -1,5 +1,9 @@
 # 🎯 职镜 —— 面向大学生的 AI 简历诊断工具
 
+[![CI](https://github.com/S-H-S996/ZhiJing/actions/workflows/ci.yml/badge.svg)](https://github.com/S-H-S996/ZhiJing/actions)
+[![coverage](https://img.shields.io/badge/coverage-63%25-brightgreen)](https://github.com/S-H-S996/ZhiJing)
+[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
+
 面向大学生求职场景的 AI 简历诊断与岗位匹配工具：粘贴简历 → 选择岗位 → 一键得到
 **匹配评分 + 能力缺口 + 3 条可执行修改建议 + 可导出报告**。
 

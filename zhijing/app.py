@@ -41,7 +41,7 @@ def score_label(score: int) -> str:
 
 def build_report(profile, jd, result, suggestions, used_llm: bool) -> str:
     lines = [
-        f"# 职镜 · 简历诊断报告",
+        "# 职镜 · 简历诊断报告",
         "",
         f"- 目标岗位：{jd['title']}（{jd['company']} / {jd['city']}）",
         f"- 综合匹配度：**{result.score} / 100**（{score_label(result.score)}）",
