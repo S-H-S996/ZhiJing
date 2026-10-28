@@ -14,6 +14,7 @@ import streamlit as st
 
 from core import db, llm, rag, tools, optimizer, agent_graph
 from core.advisor import generate_suggestions
+from core.privacy import redact
 from core.fileio import extract_text
 from core.matcher import match
 from core.parser import parse_resume, parse_resume_hybrid
@@ -111,6 +112,7 @@ def main():
                     "`LLM_API_KEY=你的key`\n"
                     "`LLM_MODEL=deepseek-chat`")
         st.caption(f"当前解析引擎：{st.session_state.get('parse_engine', 'auto')}")
+        redact_enabled = st.checkbox("发送前脱敏（推荐）", value=True, help="把手机号/邮箱/身份证/姓名替换为占位符后再送大模型")
         st.divider()
         st.header("🔍 检索模式")
         search_mode = st.selectbox(
@@ -167,6 +169,18 @@ def main():
             help="auto=规则优先、弱时LLM补充；rule=纯规则；llm=纯LLM（失败回退规则）",
         )
     with col2:
+        if resume_text.strip():
+            try:
+                from core.recommender import recommend_jobs
+                recs = recommend_jobs(resume_text, jds, top_k=3)
+                if recs:
+                    _profile = parse_resume(resume_text)
+                    with st.expander("🎯 为你推荐的 Top3 岗位"):
+                        for jd_rec, sim in recs:
+                            sc = match(_profile, jd_rec).score
+                            st.markdown(f"**{jd_rec['title']}**（{jd_rec['company']}）· 相似度 {sim*100:.0f}% · 匹配 {sc} 分")
+            except Exception:
+                pass
         st.subheader("② 选择目标岗位")
         jd_options = {f"{j['title']} · {j['company']}": j["id"] for j in jds}
         jd_label = st.radio("内置岗位库", list(jd_options.keys()))
@@ -176,6 +190,12 @@ def main():
             st.markdown("**必需技能**：" + "、".join(jd["skills"]["required"]))
             st.markdown("**加分技能**：" + "、".join(jd["skills"]["preferred"]))
 
+    # 脱敏：只作用于送 LLM 的文本，本地展示与存储仍用原文
+    if redact_enabled and resume_text.strip():
+        resume_for_llm, redact_count = redact(resume_text)
+    else:
+        resume_for_llm, redact_count = resume_text, 0
+
     # ---------- 诊断（自动触发：粘贴 / 上传 / 换岗位即重新匹配）----------
     if resume_text.strip():
         profile = parse_resume_hybrid(resume_text, engine=parse_engine)
@@ -183,7 +203,7 @@ def main():
 
         # RAG：检索「补法知识库」→ 增强 → 生成建议（无 API 时降级为检索结果本身）
         query = " ".join(result.gaps + result.missing_skills) + " " + jd["title"]
-        suggestions, rag_docs, used_llm, judge_info = rag.rag_suggestions(query, jd["title"], result.gaps, resume_text, mode=search_mode)
+        suggestions, rag_docs, used_llm, judge_info = rag.rag_suggestions(query, jd["title"], result.gaps, resume_for_llm, mode=search_mode)
         if not suggestions:
             suggestions = generate_suggestions(profile, result, jd)
 
@@ -199,6 +219,8 @@ def main():
 
         st.divider()
         st.subheader("诊断结果")
+        if redact_enabled and redact_count > 0:
+            st.caption(f"🔒 已脱敏 {redact_count} 处敏感信息后再发送给大模型")
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("综合匹配度", f"{result.score} / 100", score_label(result.score))
@@ -276,7 +298,7 @@ def main():
             st.warning("请先粘贴或上传简历。")
         else:
             with st.spinner("正在优化…"):
-                result = optimizer.optimize_resume(resume_text, jd)
+                result = optimizer.optimize_resume(resume_for_llm, jd)
             if result:
                 st.session_state["_opt_result"] = result
             else:
@@ -312,7 +334,7 @@ def main():
             resume_ctx = ""
             if resume_text.strip():
                 resume_ctx = (
-                    f"\n\n【当前简历内容】\n{resume_text[:1500]}\n"
+                    f"\n\n【当前简历内容】\n{resume_for_llm[:1500]}\n"
                     "（回答可结合这份简历；需要精确分数或岗位要求时再调用工具）"
                 )
             system = (
@@ -320,7 +342,7 @@ def main():
                 "\n\n先判断用户问题需要调用哪个工具来获取信息，拿到工具结果后再用简洁的语言回答。"
             )
             if agent_mode == "多轮":
-                agent_result = agent_graph.run_agent(system, agent_q, tools.TOOL_SCHEMAS, resume_text)
+                agent_result = agent_graph.run_agent(system, agent_q, tools.TOOL_SCHEMAS, resume_for_llm)
                 if agent_result is not None:
                     st.markdown("**💬 助手回答**")
                     st.markdown(agent_result["answer"])
@@ -330,7 +352,7 @@ def main():
                                 st.markdown(f"**{s['node']}**：{s['summary']}")
                 else:
                     st.caption("（langgraph 未安装或不可用，回退单轮）")
-                    _run_single_turn(system, agent_q, jds, resume_text)
+                    _run_single_turn(system, agent_q, jds, resume_for_llm)
             else:
                 _run_single_turn(system, agent_q, jds, resume_text)
 
