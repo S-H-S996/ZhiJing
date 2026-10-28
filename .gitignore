@@ -1,0 +1,25 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+data/records.db
+data/chroma/
+.pytest_cache/
+.coverage
+htmlcov/
+eval/results/
+.DS_Store
+# 隐私文件
+简历*
+*证明材料*
+# 大体积文档
+*.pdf
+*.pptx
+*.ppt
+# 大创辅助材料（可选）
+岗位调研表.md
+试用数据收集表.md
+PPT提纲.md
+演示PPT.html

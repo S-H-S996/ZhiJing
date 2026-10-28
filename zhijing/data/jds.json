@@ -1,0 +1,142 @@
+[
+  {
+    "id": "alibaba-ai-app",
+    "title": "AI 应用研发工程师（Agent 应用方向）",
+    "company": "阿里巴巴",
+    "city": "杭州 / 深圳",
+    "summary": "利用 Agent 等前沿技术推动 AI 落地，从需求洞察到系统构建研发智能应用与工具，覆盖需求归因、架构设计、RAG 知识库、Agent 工程落地与性能优化。（阿里巴巴 2027 届实习生）",
+    "skills": {
+      "required": ["Python", "Prompt 工程", "大模型 API 调用", "LangChain", "RAG", "工具调用/Function Calling", "Git"],
+      "preferred": ["MCP/Skill", "上下文工程", "评测体系", "AI Infra", "AI编程工具", "异步/高并发", "FastAPI", "微调"]
+    },
+    "soft_skills": ["快速学习", "自驱力", "动手能力"],
+    "experience": {
+      "min_projects": 2,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "软件工程", "人工智能"]
+    }
+  },
+  {
+    "id": "cvte-ai-app",
+    "title": "应用软件开发工程师（AI Coding / 应用方向）",
+    "company": "CVTE 视源股份",
+    "city": "广州",
+    "summary": "负责应用软件的设计、开发、测试与迭代，运用 AI Coding 提升研发效率并保障交付质量；参与 RAG、Agent、多模态或端侧 AI 应用开发。方向：Web / Android / C++ 应用。",
+    "skills": {
+      "required": ["Python", "AI编程工具", "大模型 API 调用", "RAG", "LangChain"],
+      "preferred": ["多模态", "端侧AI", "上下文工程", "C++", "JavaScript", "FastAPI", "微调"]
+    },
+    "soft_skills": ["沟通表达", "快速学习", "问题定位"],
+    "experience": {
+      "min_projects": 1,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "软件工程", "人工智能"]
+    }
+  },
+  {
+    "id": "alibaba-llm-app",
+    "title": "算法工程师 - 大模型应用（后训练方向）",
+    "company": "阿里巴巴",
+    "city": "杭州 / 北京",
+    "summary": "将大模型能力做成可上线、可迭代、可控成本的产品能力，覆盖数据飞轮、模型后训练（SFT/RL）、评测与实验的端到端闭环。硕士/博士优先，优秀本科生不受限制。",
+    "skills": {
+      "required": ["Python", "PyTorch", "微调", "机器学习", "深度学习", "RAG", "工具调用/Function Calling", "评测体系"],
+      "preferred": ["分布式训练", "AI Infra", "合成数据", "强化学习", "LangChain", "大数据"]
+    },
+    "soft_skills": ["快速学习", "自驱力", "动手能力"],
+    "experience": {
+      "min_projects": 2,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "数学", "统计"]
+    }
+  },
+  {
+    "id": "vip-llm-algo",
+    "title": "算法工程师 - 大模型电商应用",
+    "company": "唯品会",
+    "city": "广州",
+    "summary": "专注 LLM 在电商场景的算法研发与应用：AIGC 商品文案/卖点生成、智能导购与客服、Agent 与生成式搜索推荐；负责 SFT/RL 大模型后训练。硬性要求硕士/博士。",
+    "skills": {
+      "required": ["Python", "PyTorch", "机器学习", "深度学习", "微调"],
+      "preferred": ["强化学习", "RAG", "大模型 API 调用", "LangChain", "合成数据", "广告算法"]
+    },
+    "soft_skills": ["快速学习", "自驱力", "问题定位"],
+    "experience": {
+      "min_projects": 2,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "硕士",
+      "majors": ["计算机", "数学"]
+    }
+  },
+  {
+    "id": "bytedance-rec-algo",
+    "title": "推荐/广告算法工程师",
+    "company": "字节跳动",
+    "city": "北京 / 深圳",
+    "summary": "基于个性化推荐、深度学习和 LLM，构建抖音电商、生活服务、广告营销等场景的算法策略与工程架构，优化变现效率与用户体验。",
+    "skills": {
+      "required": ["Python", "C++", "机器学习", "深度学习", "PyTorch", "推荐系统", "特征工程"],
+      "preferred": ["强化学习", "大模型 API 调用", "广告算法", "大数据"]
+    },
+    "soft_skills": ["沟通表达", "责任心", "问题定位"],
+    "experience": {
+      "min_projects": 1,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "数学", "统计"]
+    }
+  },
+  {
+    "id": "wps-server",
+    "title": "服务端开发工程师",
+    "company": "金山办公（WPS）",
+    "city": "珠海 / 广州",
+    "summary": "负责核心业务系统的架构设计、功能开发与持续迭代，探索 AI 能力在办公场景的服务端落地。掌握 golang/php/C++/Java 任一，熟悉 TCP/HTTP 与版本控制；客户端/前端方向优先。",
+    "skills": {
+      "required": ["Go/Golang", "Git"],
+      "preferred": ["PHP", "C++", "Java", "网络协议", "前端框架", "客户端", "TypeScript"]
+    },
+    "soft_skills": ["快速学习", "自驱力", "沟通表达"],
+    "experience": {
+      "min_projects": 1,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "软件工程", "网络工程"]
+    }
+  },
+  {
+    "id": "wps-pm-ai",
+    "title": "产品经理（AI 应用专项）",
+    "company": "金山办公（WPS）",
+    "city": "珠海 / 广州",
+    "summary": "负责金山办公重点产品的需求挖掘与规划，以技术视角参与产品全链路方案设计，运用 AI 技能探索 AI 原生办公产品方向。",
+    "skills": {
+      "required": ["Python", "大模型 API 调用", "数据分析"],
+      "preferred": ["Prompt 工程", "RAG", "LangChain", "数据可视化", "数据清洗", "AI编程工具"]
+    },
+    "soft_skills": ["沟通表达", "自驱力", "问题定位", "业务理解"],
+    "experience": {
+      "min_projects": 1,
+      "preferred_internship": false
+    },
+    "education": {
+      "degree": "本科",
+      "majors": ["计算机", "通信", "电子"]
+    }
+  }
+]
