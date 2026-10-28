@@ -183,7 +183,7 @@ def main():
 
         # RAG：检索「补法知识库」→ 增强 → 生成建议（无 API 时降级为检索结果本身）
         query = " ".join(result.gaps + result.missing_skills) + " " + jd["title"]
-        suggestions, rag_docs, used_llm = rag.rag_suggestions(query, jd["title"], result.gaps, resume_text, mode=search_mode)
+        suggestions, rag_docs, used_llm, judge_info = rag.rag_suggestions(query, jd["title"], result.gaps, resume_text, mode=search_mode)
         if not suggestions:
             suggestions = generate_suggestions(profile, result, jd)
 
@@ -225,6 +225,16 @@ def main():
             st.markdown("#### ⚠️ 能力缺口")
             for g in result.gaps:
                 st.markdown(f"- {g}")
+
+        if judge_info:
+            scores = judge_info.get("scores", []) or []
+            e_avg = sum(s.get("e", 0) for s in scores) / len(scores) if scores else 0
+            s_avg = sum(s.get("s", 0) for s in scores) / len(scores) if scores else 0
+            t_avg = sum(s.get("t", 0) for s in scores) / len(scores) if scores else 0
+            st.caption(f"建议质量分：{float(judge_info.get('avg', 0)):.1f}/5（可执行 {e_avg:.1f} / 具体 {s_avg:.1f} / 忠实 {t_avg:.1f}）")
+            if judge_info.get("reason"):
+                with st.expander("查看评审理由"):
+                    st.markdown(judge_info["reason"])
 
         st.markdown("#### 💡 三条修改建议")
         for i, s in enumerate(suggestions, 1):

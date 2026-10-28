@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 
 from . import llm
+from .judge import judge
 
 # 知识库：每条 = 一个能力缺口 / 写法的可执行补法。
 # tags 用于检索匹配（中英文都放，覆盖简历缺口里的各种叫法）。
@@ -212,16 +213,37 @@ def format_context(docs: list[dict]) -> str:
     return "\n\n".join(f"【{d['title']}】{d['content']}" for d in docs)
 
 
-def rag_suggestions(query: str, jd_title: str, gaps: list[str], profile_text: str, mode: str = "auto"):
-    """RAG 主流程：检索 → 增强 → 生成。
+def _parse_json_list(content: str) -> list | None:
+    """从 LLM 输出中提取 JSON 数组（容忍 markdown 代码块围栏）；失败返回 None。"""
+    content = (content or "").strip()
+    if content.startswith("```"):
+        content = content.strip("`")
+        if content.lower().startswith("json"):
+            content = content[4:]
+        content = content.strip()
+    start = content.find("[")
+    end = content.rfind("]")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        arr = json.loads(content[start:end + 1])
+    except (json.JSONDecodeError, ValueError):
+        return None
+    return arr if isinstance(arr, list) else None
 
-    返回 (suggestions, retrieved_docs, used_llm)：
-    - used_llm=True 表示大模型基于知识片段生成了个性化建议
-    - used_llm=False 表示离线降级，直接返回检索到的知识片段本身
+
+def rag_suggestions(query: str, jd_title: str, gaps: list[str], profile_text: str, mode: str = "auto", gate: bool = True):
+    """RAG 主流程：检索 → 增强 → 生成 → 质量门控。
+
+    返回 (suggestions, retrieved_docs, used_llm, judge_info)：
+    - used_llm=True 表示大模型生成了建议
+    - judge_info 为质量门控结果（dict 或 None）；gate=False 时不做门控返回 None
+    - 门控不过（重试一次仍 < 3.5）时返回空 suggestions，由调用方降级为规则建议
     retrieved_docs 每条带 "retrieve_mode" 字段（"vector"/"keyword"）。
     """
     docs = retrieve(query, mode=mode)
     context = format_context(docs)
+    judge_info = None
 
     if llm.is_configured() and docs:
         system = (
@@ -234,16 +256,36 @@ def rag_suggestions(query: str, jd_title: str, gaps: list[str], profile_text: st
             f"【知识片段】\n{context}\n\n【简历】\n{profile_text[:1500]}"
         )
         content = llm.rag_generate_langchain(system, user) or llm.rag_generate(system, user)
-        if content:
-            try:
-                arr = json.loads(content)
-                if isinstance(arr, list):
-                    return [str(x) for x in arr[:3]], docs, True
-            except (json.JSONDecodeError, ValueError):
-                pass
+        arr = _parse_json_list(content)
+        if arr is not None:
+            suggestions = [str(x) for x in arr[:3]]
+            if not gate:
+                return suggestions, docs, True, None
+
+            judge_info = judge(suggestions, profile_text)
+            if judge_info is not None and float(judge_info.get("avg", 0)) < 3.5:
+                # 不合格：把评审理由拼进 prompt 重试一次
+                reason = judge_info.get("reason", "")
+                retry_user = user + f"\n\n上次建议的评审反馈：{reason}\n请据此改进建议。"
+                content2 = llm.rag_generate_langchain(system, retry_user) or llm.rag_generate(system, retry_user)
+                arr2 = _parse_json_list(content2)
+                if arr2 is not None:
+                    suggestions2 = [str(x) for x in arr2[:3]]
+                    judge_info2 = judge(suggestions2, profile_text)
+                    if judge_info2 is not None:
+                        judge_info2["_retried"] = True
+                        judge_info = judge_info2
+                        if float(judge_info2.get("avg", 0)) >= 3.5:
+                            return suggestions2, docs, True, judge_info
+                # 仍不合格：返回空，交调用方降级为规则建议
+                if judge_info is not None:
+                    judge_info["_fell_back"] = True
+                return [], docs, True, judge_info
+
+            return suggestions, docs, True, judge_info
 
     # 离线降级：直接返回检索到的知识片段作为建议
     fallback = [d["content"] for d in docs] or [
         "针对当前缺口补一个可展示的小项目，留下可被追问的实现细节。"
     ]
-    return fallback, docs, False
+    return fallback, docs, False, judge_info
