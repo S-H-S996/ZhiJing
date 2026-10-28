@@ -210,3 +210,62 @@ def parse_resume(text: str) -> ResumeProfile:
         ai_related=_is_ai_related(projects, skills),
         word_count=len(text),
     )
+
+
+def _extracted_to_profile(text: str, ext) -> ResumeProfile:
+    """把 llm_extractor 的 ExtractedResume 转成 ResumeProfile。"""
+    return ResumeProfile(
+        raw=text,
+        school=ext.school or "",
+        degree=ext.degree or "",
+        major=ext.major or "",
+        skills=set(ext.skills or []),
+        soft_skills=set(ext.soft_skills or []),
+        projects=list(ext.projects or []),
+        ai_related=bool(ext.ai_related),
+        word_count=len(text),
+    )
+
+
+def parse_resume_hybrid(text: str, engine: str = "rule") -> ResumeProfile:
+    """混合解析入口：rule / llm / auto，均返回 ResumeProfile，LLM 失败静默回退规则。
+
+    - rule：走 parse_resume（向后兼容，永不失败）
+    - llm：调 llm_extractor.extract_with_llm，失败回退 parse_resume
+    - auto：先规则；若 skills<3 或 major 为空，再试 LLM 补充（取并集）
+    """
+    if engine == "rule":
+        return parse_resume(text)
+
+    if engine == "llm":
+        ext = None
+        try:
+            from . import llm_extractor
+            ext = llm_extractor.extract_with_llm(text)
+        except Exception:
+            ext = None
+        if ext is None:
+            return parse_resume(text)
+        return _extracted_to_profile(text, ext)
+
+    # engine == "auto"
+    profile = parse_resume(text)
+    if len(profile.skills) < 3 or not profile.major:
+        ext = None
+        try:
+            from . import llm_extractor
+            ext = llm_extractor.extract_with_llm(text)
+        except Exception:
+            ext = None
+        if ext is not None:
+            merged = _extracted_to_profile(text, ext)
+            merged.skills = set(profile.skills) | set(merged.skills)
+            merged.soft_skills = set(profile.soft_skills) | set(merged.soft_skills)
+            merged.school = merged.school or profile.school
+            merged.degree = merged.degree or profile.degree
+            merged.major = merged.major or profile.major
+            if not merged.projects:
+                merged.projects = profile.projects
+            merged.ai_related = merged.ai_related or profile.ai_related
+            return merged
+    return profile

@@ -16,7 +16,7 @@ from core import db, llm, rag, tools, optimizer
 from core.advisor import generate_suggestions
 from core.fileio import extract_text
 from core.matcher import match
-from core.parser import parse_resume
+from core.parser import parse_resume, parse_resume_hybrid
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JD_PATH = os.path.join(BASE_DIR, "data", "jds.json")
@@ -84,6 +84,7 @@ def main():
                     "`LLM_BASE_URL=https://api.deepseek.com/v1`\n"
                     "`LLM_API_KEY=你的key`\n"
                     "`LLM_MODEL=deepseek-chat`")
+        st.caption(f"当前解析引擎：{st.session_state.get('parse_engine', 'auto')}")
         st.divider()
         st.header("🔍 检索模式")
         search_mode = st.selectbox(
@@ -122,6 +123,14 @@ def main():
             resume_text = extract_text(uploaded.name, uploaded.getvalue())
             if not resume_text.strip():
                 st.warning("未能从该文件提取到文本（图片简历需要安装 OCR 引擎，扫描版 PDF 也可能无法提取），请直接粘贴文本。")
+        parse_engine = st.radio(
+            "解析引擎",
+            options=["auto", "rule", "llm"],
+            index=0,
+            horizontal=True,
+            key="parse_engine",
+            help="auto=规则优先、弱时LLM补充；rule=纯规则；llm=纯LLM（失败回退规则）",
+        )
     with col2:
         st.subheader("② 选择目标岗位")
         jd_options = {f"{j['title']} · {j['company']}": j["id"] for j in jds}
@@ -134,7 +143,7 @@ def main():
 
     # ---------- 诊断（自动触发：粘贴 / 上传 / 换岗位即重新匹配）----------
     if resume_text.strip():
-        profile = parse_resume(resume_text)
+        profile = parse_resume_hybrid(resume_text, engine=parse_engine)
         result = match(profile, jd)
 
         # RAG：检索「补法知识库」→ 增强 → 生成建议（无 API 时降级为检索结果本身）
