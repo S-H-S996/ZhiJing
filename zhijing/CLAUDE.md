@@ -60,3 +60,17 @@ pytest -q   # 批次 4 之后
 - 不引入 Redis / Postgres / Kafka 等需要外部服务的依赖
 - 不用 langchain 全家桶替代现有的极简实现（langchain 仅用于 `llm.rag_generate_langchain` 这一处可选增强）
 - 不改动 `data/jds.json` 的结构（字段：`id` / `title` / `company` / `city` / `summary` / `skills` / `soft_skills` / `experience` / `education`）
+
+## Future Work / 后续优化
+
+> 记录已识别但暂不实现的优化项，供答辩「不足与展望」环节引用。
+
+### 1. 多轮 Agent 的批量诊断（Token 成本优化）
+
+- **现状**：智能选岗助手（`core/agent_graph.py`）问「我适合投哪个岗位？」时，planner 会
+  对 7 个岗位各调一次 `diagnose`（7 次单点工具调用），每轮产生 7 次 LLM 工具往返。
+- **优化方向**：在 `core/tools.py` 新增一个「批量诊断」工具（一次返回 7 个岗位的评分与缺口），
+  把 7 次调用压成 1 次，降低 Token 成本与端到端延迟。
+- **答辩用途**：作为「不足与展望」环节的工程思维证明——主动识别「7 次单点 vs 1 次批量」
+  的调用模式差异，说明有成本 / 延迟意识，而不只是"功能跑通"。
+- **状态**：暂不实现（冲刺期优先主线：评测集、工程质量、答辩材料）。
