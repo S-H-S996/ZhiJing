@@ -69,3 +69,12 @@ zhijing/
 
 - `data/records.db`：累计诊断次数、独立简历数、平均分 → 可直接统计「试用人数」等真实证据
 - 诊断报告：每次可导出，用于留存样例
+
+## 开发与测试
+
+```bash
+pytest -q tests/                      # 跑全部单元测试
+pytest --cov=core --cov-report=term-missing tests/   # 带覆盖率
+```
+
+目标覆盖率 ≥ 60%。改 core/ 逻辑前先跑测试，避免回归。
